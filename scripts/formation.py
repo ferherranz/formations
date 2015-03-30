@@ -7,6 +7,9 @@ import numpy as np
 import math
 from std_msgs.msg import String
 from geometry_msgs.msg import *
+from geometry_msgs.msg import *
+from visualization_msgs.msg import *
+from std_msgs.msg import ColorRGBA
 import time
 import tf
 import angles
@@ -35,7 +38,36 @@ class Flock(object):
         self.node.append({'id':2, 'agent':Agent('robot_2'), 'p':[100,100], 'xi':[100,100], 'neighbor':[0,1,3]})
         self.node.append({'id':3, 'agent':Agent('robot_3'), 'p':[100,300], 'xi':[100,300], 'neighbor':[0,1,2]})
         
- 
+    def publishConnections(self):
+	pub = rospy.Publisher("formation/connections", MarkerArray)
+	markerArray = MarkerArray()
+	line_color = ColorRGBA(0,0,1,1)
+	line_width = 0.01
+	for agent in self.node:
+	    for j in agent['neighbor']:
+		neighbor = self.node[j]
+		a_pos = agent['agent'].pose.position
+		n_pos = neighbor['agent'].pose.position
+		
+		p1 = Point(a_pos.x, a_pos.y, a_pos.z)
+		p2 = Point(n_pos.x, n_pos.y, n_pos.z)
+		
+		marker = Marker()
+		marker.header.frame_id = '/map'
+		marker.type = marker.LINE_LIST
+		marker.action = marker.ADD
+		marker.color = line_color
+		marker.points = [p1, p2]
+		marker.scale.x = line_width
+		markerArray.markers.append(marker)
+	  
+        id = 0
+	for m in markerArray.markers:
+	    m.lifetime = rospy.Duration(1.0)
+	    m.id = id
+	    id += 1     
+	pub.publish(markerArray)      
+        
 	
 
                 
@@ -49,9 +81,7 @@ class Agent(object):
         rospy.Subscriber("/" + self.name + "/robot_pose", Pose, self.PoseCallback)        
         
     def PoseCallback(self, pose):      
-      self.pose = pose
-      #print self.name + ": " + str(self.pose.position.x) + " " + str(self.pose.position.y)
-     
+      self.pose = pose     
       
     def SendCmd(self,v_x,v_theta):
 	pub = rospy.Publisher("/" + self.name + "/cmd_vel", Twist)
@@ -64,7 +94,7 @@ class Agent(object):
 class Goal(object):
     def __init__(self):	
         self.pose = []        
-        rospy.Subscriber("/formation/goal", PoseStamped, self.GoalCallback)     
+        rospy.Subscriber("formation/goal", PoseStamped, self.GoalCallback)     
         
     def GoalCallback(self, goal):      
 	self.pose = [goal.pose.position.x*SCALE, goal.pose.position.y*SCALE]
@@ -74,19 +104,10 @@ class Obstacle(object):
     def __init__(self):
         self.node = []
 
-#        self.node.append([600,600])
-
-##        self.node.append([-50,100])
-##        self.node.append([10,10])
-##        self.node.append([100,10])
-##        self.node.append([50,50])
-##        self.node.append([-10,10])
-##        self.node.append([-30,100])
-
-
 #Flock
 class World(object):
     def __init__(self, flock, goal, obstacle):
+	self.flock = flock
         self.flocknode = flock.node
         #self.my_agents = agent.agents
         self.goal = goal
@@ -169,6 +190,9 @@ class World(object):
         self.formation()
         self.destination()
         self.avoidance()
+        self.flock.publishConnections()
+        
+    
 
 #World
 class Controlor(object):
