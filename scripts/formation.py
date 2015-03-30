@@ -62,10 +62,14 @@ class Agent(object):
         
 #Goal
 class Goal(object):
-    def __init__(self):
-        self.node = [600,600]
+    def __init__(self):	
+        self.pose = []        
+        rospy.Subscriber("/formation/goal", PoseStamped, self.GoalCallback)     
+        
+    def GoalCallback(self, goal):      
+	self.pose = [goal.pose.position.x*SCALE, goal.pose.position.y*SCALE]
 
-
+	
 class Obstacle(object):
     def __init__(self):
         self.node = []
@@ -85,7 +89,7 @@ class World(object):
     def __init__(self, flock, goal, obstacle):
         self.flocknode = flock.node
         #self.my_agents = agent.agents
-        self.goalnode = goal.node
+        self.goal = goal
         self.obstaclenode = obstacle.node
         self.update()
 
@@ -115,16 +119,22 @@ class World(object):
             x_i['dp_f'] = [dp_x, dp_y]
 	    
     def destination(self):
-        for x_i in self.flocknode:
-            gl = self.goalnode
-            xv = [x_i['agent'].pose.position.x*SCALE, x_i['agent'].pose.position.y*SCALE]
+
+        gl = self.goal.pose
+
+	for x_i in self.flocknode:
+	    dp_x = 0
+	    dp_y = 0
+
+	    if gl: # there is goal	
+	      xv = [x_i['agent'].pose.position.x*SCALE, x_i['agent'].pose.position.y*SCALE]
+	      dist = np.sqrt(pow(gl[0] - xv[0],2) + pow(gl[1] - xv[1],2))
             
-            dist = np.sqrt(pow(gl[0] - xv[0],2) + pow(gl[1] - xv[1],2))
+	      dp_x = (gl[0] - xv[0])
+	      dp_y = (gl[1] - xv[1])
             
-            dp_x = (gl[0] - xv[0])
-            dp_y = (gl[1] - xv[1])
-            x_i['dp_g'] = [dp_x, dp_y]
-            #print x_i['dp_g']
+	    x_i['dp_g'] = [dp_x, dp_y]
+	  #print x_i['dp_g']
            
            
 ##    def avoidance(self)
@@ -178,6 +188,7 @@ class Controlor(object):
             on = oldflocknode[i]
             #np_x = on['p'][0] + dt * (0.5*on['dp_f'][0] + 1.1*on['dp_g'][0] + 100*on['dp_a'][0])
             #np_y = on['p'][1] + dt * (0.5*on['dp_f'][1] + 1.1*on['dp_g'][1] + 100*on['dp_a'][1])
+            
             np_x = (0.1*on['dp_g'][0] / SCALE) + 0.05*on['dp_f'][0]/ SCALE
             np_y = (0.1*on['dp_g'][1] / SCALE) + 0.05*on['dp_f'][1]/ SCALE
             
