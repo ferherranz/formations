@@ -43,6 +43,7 @@ def rotMatrix2D(yaw):
 class Flock(object):
     def __init__(self):
         self.node = []
+        #self.tempgoal = []
 	self.global_costmap = OccupancyGrid()
 	rospy.Subscriber("/map", OccupancyGrid, self.GlobalCostMapCallback)   
        
@@ -51,13 +52,37 @@ class Flock(object):
         #self.node.append({'id':2, 'agent':Agent('robot_2'), 'role': 'follow', 'p':[-200,-200], 'xi':[0,0], 'neighbor':[0,1,3]})
         #self.node.append({'id':3, 'agent':Agent('robot_3'), 'role': 'follow', 'p':[-200,0], 'xi':[0,0], 'neighbor':[0,1,2]})
         
-	self.node.append({'id':0, 'agent':Agent('robot_0'), 'role': 'leader', 'p':[0,0], 'xi':[0,0], 'neighbor':[1,2,3]})
-        self.node.append({'id':1, 'agent':Agent('robot_1'), 'role': 'follow', 'p':[-200,100], 'xi':[0,0], 'neighbor':[0,2,3]})
-        self.node.append({'id':2, 'agent':Agent('robot_2'), 'role': 'follow', 'p':[-200,-100], 'xi':[0,0], 'neighbor':[0,1,3]})
-        self.node.append({'id':3, 'agent':Agent('robot_3'), 'role': 'follow', 'p':[-400,0], 'xi':[0,0], 'neighbor':[0,1,2]})
+	self.node.append({'id':0, 'agent':Agent('robot_0'), 'role': 'leader', 'p':[0,0], 'xf':[0,0], 'neighbor':[1,2,3]})
+        self.node.append({'id':1, 'agent':Agent('robot_1'), 'role': 'follow', 'p':[-200,100], 'xf':[0,0], 'neighbor':[0,2,3]})
+        self.node.append({'id':2, 'agent':Agent('robot_2'), 'role': 'follow', 'p':[-200,-100], 'xf':[0,0], 'neighbor':[0,1,3]})
+        self.node.append({'id':3, 'agent':Agent('robot_3'), 'role': 'follow', 'p':[-400,0], 'xf':[0,0], 'neighbor':[0,1,2]})
         
+        
+        
+    ## Set the temp goal computes a temporary goal for the formation which is the weight center of the formation
+    #def setTempGoal(self):
+	#leader = self.getLeader()
+	#r, p, yaw = getRPY(leader.pose.orientation) 	
+	#rotMatrix = rotMatrix2D(yaw)	
+	#leader_pos = leader.pose.position 
 	
-        
+	#num_agents = 0
+	#sum_x = 0
+        #sum_y = 0
+        #for x_i in self.node:
+            #xv_i = [x_i['agent'].pose.position.x*SCALE, x_i['agent'].pose.position.y*SCALE]
+            
+	    ##ref_xf_i rotated and translated to leader coordinates frame
+	    #ref_xf_i = rotMatrix.dot(np.array(x_i['p']))
+	    #ref_xf_i = [ref_xf_i[0] + leader_pos.x*SCALE, ref_xf_i[1] + leader_pos.y*SCALE]
+	    
+	    #sum_x += ref_xf_i[0]
+	    #sum_y += ref_xf_i[1]
+	    
+	    #num_agents += 1
+	 
+	#self.tempgoal = [sum_x/num_agents, sum_y/num_agents]
+	 
     def getLeader(self):
 	for x_i in self.node:
             if x_i['role'] == 'leader':
@@ -90,6 +115,7 @@ class Flock(object):
 		marker.scale.x = line_width
 		markerArray.markers.append(marker)
 	    
+	    #plot formation poses
 	    marker = Marker()
 	    marker.header.frame_id = "/map"
 	    marker.type = marker.SPHERE
@@ -103,10 +129,30 @@ class Flock(object):
 	    marker.color.b = 0.0
 	    marker.pose.orientation.w = 1.0
 	    
-	    marker.pose.position.x = (agent['xi'][0]/SCALE)
-	    marker.pose.position.y = (agent['xi'][1]/SCALE)
+	    marker.pose.position.x = (agent['xf'][0]/SCALE)
+	    marker.pose.position.y = (agent['xf'][1]/SCALE)
 	    marker.pose.position.z = 0
 	    markerArray.markers.append(marker)
+	    
+	    #plot formation temporal goal
+	    #marker = Marker()
+	    #marker.header.frame_id = "/map"
+	    #marker.type = marker.SPHERE
+	    #marker.action = marker.ADD
+	    #marker.scale.x = 0.2
+	    #marker.scale.y = 0.2
+	    #marker.scale.z = 0.2
+	    #marker.color.a = 1.0
+	    #marker.color.r = 1.0
+	    #marker.color.g = 1.0
+	    #marker.color.b = 0.0
+	    #marker.pose.orientation.w = 1.0
+	    
+	    #marker.pose.position.x = (self.tempgoal[0]/SCALE)
+	    #marker.pose.position.y = (self.tempgoal[1]/SCALE)
+	    #marker.pose.position.z = 0
+	    #markerArray.markers.append(marker)
+	    
         id = 0
 	for m in markerArray.markers:
 	    m.lifetime = rospy.Duration(1.0)
@@ -138,13 +184,19 @@ class Agent(object):
         
         
 #Goal
-class Goal(object):
-    def __init__(self):	
-        self.pose = []        
-        rospy.Subscriber("formation/goal", PoseStamped, self.GoalCallback)    
+#class Goal(object):
+    #def __init__(self):	
+        #self.pose = []        
+        ##rospy.Subscriber("formation/goal", PoseStamped, self.GoalCallback)    
         
-    def GoalCallback(self, goal):      
-	self.pose = [goal.pose.position.x*SCALE, goal.pose.position.y*SCALE]
+        #rospy.Subscriber("robot_0/robot_pose", Pose, self.GoalCallback)  
+        
+    #def GoalCallback(self, goal):      
+	#self.pose = [goal.pose.position.x*SCALE, goal.pose.position.y*SCALE]
+	
+    #def GoalCallback(self, goal):      
+	#self.pose = [goal.position.x*SCALE, goal.position.y*SCALE]
+
 
 	
 class Obstacle(object):
@@ -153,102 +205,78 @@ class Obstacle(object):
 
 #Flock
 class World(object):
-    def __init__(self, flock, goal, obstacle):
+    #def __init__(self, flock, goal, obstacle):
+    def __init__(self, flock):
 	self.flock = flock
         self.flocknode = flock.node 
-        self.goal = goal
-        self.obstaclenode = obstacle.node
+        #self.goal = goal
         self.update()
 
     def formation(self):
 	
+	dlt = 5
+	amp = 1
+            
 	leader = self.flock.getLeader()
-	r, p, yaw = getRPY(leader.pose.orientation) 
-	
-	rotMatrix = rotMatrix2D(yaw)
-	
+	r, p, yaw = getRPY(leader.pose.orientation) 	
+	rotMatrix = rotMatrix2D(yaw)	
 	leader_pos = leader.pose.position 
+	
         for x_i in self.flocknode:
             dp_x = 0
             dp_y = 0
             
             xv_i = [x_i['agent'].pose.position.x*SCALE, x_i['agent'].pose.position.y*SCALE]
             
-	    #ref_x_i rotated and translated to leader coordinates frame
-	    ref_x_i = rotMatrix.dot(np.array(x_i['p']))
-	    ref_x_i = [ref_x_i[0] + leader_pos.x*SCALE, ref_x_i[1] + leader_pos.y*SCALE]
+	    #ref_xf_i rotated and translated to leader coordinates frame
+	    ref_xf_i = rotMatrix.dot(np.array(x_i['p']))
+	    ref_xf_i = [ref_xf_i[0] + leader_pos.x*SCALE, ref_xf_i[1] + leader_pos.y*SCALE]
 	    
-	    x_i['xi'] = ref_x_i          
+	    x_i['xf'] = ref_xf_i          
       
             for j in x_i['neighbor']:
                 x_j = self.flocknode[j]                
                 
                 xv_j = [x_j['agent'].pose.position.x*SCALE, x_j['agent'].pose.position.y*SCALE]
                 
-                #ref_x_j rotated and transalted to leader coordinates frame
-                ref_x_j = rotMatrix.dot(np.array(x_j['p']))
-                ref_x_j = [ref_x_j[0] + leader_pos.x*SCALE, ref_x_j[1] + leader_pos.y*SCALE]
-                
-                dp_x += ((ref_x_i[0] - ref_x_j[0]) - (xv_i[0] - xv_j[0]))
-                dp_y += ((ref_x_i[1] - ref_x_j[1]) - (xv_i[1] - xv_j[1]))
+                #ref_xf_j rotated and transalted to leader coordinates frame
+                ref_xf_j = rotMatrix.dot(np.array(x_j['p']))
+                ref_xf_j = [ref_xf_j[0] + leader_pos.x*SCALE, ref_xf_j[1] + leader_pos.y*SCALE]
                 
                 
+                l_x = ((ref_xf_i[0] - ref_xf_j[0]) - (xv_i[0] - xv_j[0]))
+                l_y = ((ref_xf_i[1] - ref_xf_j[1]) - (xv_i[1] - xv_j[1]))
                 
+                gauss = 1- (amp * np.exp(- (l_x**2/(2 * dlt**2) + l_y**2/(2 * dlt**2))))
+                dp_x += l_x * gauss
+                dp_y += l_y * gauss
+		#print [l_x, l_y], gauss, [dp_x, dp_y]
+                #dp_x += ((ref_xf_i[0] - ref_xf_j[0]) - (xv_i[0] - xv_j[0]))
+                #dp_y += ((ref_xf_i[1] - ref_xf_j[1]) - (xv_i[1] - xv_j[1]))
+            
+            
             x_i['dp_f'] = [dp_x, dp_y]
+      
 
+    #def destination(self):
 
-    def destination(self):
+        ##gl = self.goal.pose
+        #gl = self.flock.tempgoal
+	
+	#for x_i in self.flocknode:
+	    #dp_x = 0
+	    #dp_y = 0
 
-        gl = self.goal.pose
-
-	for x_i in self.flocknode:
-	    dp_x = 0
-	    dp_y = 0
-
-	    if gl: # there is goal	
-	      xv = [x_i['agent'].pose.position.x*SCALE, x_i['agent'].pose.position.y*SCALE]
-	      dist = np.sqrt(pow(gl[0] - xv[0],2) + pow(gl[1] - xv[1],2))
+	    #if gl: # there is goal	
+	      #xv = [x_i['agent'].pose.position.x*SCALE, x_i['agent'].pose.position.y*SCALE]
+	      #dist = np.sqrt(pow(gl[0] - xv[0],2) + pow(gl[1] - xv[1],2))
             
-	      dp_x = (gl[0] - xv[0])
-	      dp_y = (gl[1] - xv[1])
+	      #dp_x = (gl[0] - xv[0])
+	      #dp_y = (gl[1] - xv[1])
             
-	    x_i['dp_g'] = [dp_x, dp_y]
+	    #x_i['dp_g'] = [dp_x, dp_y]
 	  #print x_i['dp_g']
            
-    #def robotAvoidance(self):
-	#list_avoidance = [];
-	#safe_dist = 0.5 * SCALE
-        #for x_i in self.flocknode:
-            #dp_x = 0
-            #dp_y = 0
-            #for x_j in self.flocknode:
-                #if x_i['id'] != x_j['id']:		    
-		    #xv_i = [x_i['agent'].pose.position.x*SCALE, x_i['agent'].pose.position.y*SCALE]
-		    #xv_j = [x_j['agent'].pose.position.x*SCALE, x_j['agent'].pose.position.y*SCALE]
-		    
-		    
-		    #diff_x = xv_i[0] - xv_j[0] 
-		    #diff_y = xv_i[1] - xv_j[1]
-		    
-		    #dist = np.sqrt(pow(diff_x,2) + pow(diff_y,2))
-		    
-		    #id_av1 = str(x_i['id']) + str(x_j['id'])
-		    #id_av2 = str(x_j['id']) + str(x_i['id'])
-		    #if not id_av1 in list_avoidance and not id_av2 in list_avoidance:
-			#if dist < safe_dist:
-			  #dp_x += safe_dist - diff_x 
-			  #dp_y += safe_dist - diff_y
-			  #list_avoidance.append(id_av1)
-			  #print "WARNNING IF"
-		    #else:
-			#if dist < safe_dist:
-			  #dp_x += diff_x - safe_dist 
-			  #dp_y += diff_y - safe_dist			  
-			  #print "WARNNING ELSE"
-		      
-		      ##print [x_i['id'],x_j['id'],  xv_i[0],  xv_i[1], xv_j[0],  xv_j[1], diff_x, diff_y, safe_dist]
-            #x_i['dp_r'] = [-dp_x, -dp_y]
-            
     def robotAvoidance(self):
 	safe_dist = 0.75 * SCALE
         for x_i in self.flocknode:
@@ -298,18 +326,15 @@ class World(object):
 			print "WARNING"
 			dp_x += (xv_i[0] - ob[0]) - (threshold/dis)*dis_x
 			dp_y += (xv_i[1] - ob[1]) - (threshold/dis)*dis_y
-			#l_x = xv_i[0] - ob[0]
-			#l_y = xv_i[1] - ob[1]
-			#gauss = amp * math.exp(- (l_x**2/(2 * dlt**2) + l_y**2/(2 * dlt**2)))
-			#dp_x += l_x * gauss
-			#dp_y += l_y * gauss
+
 		i += 1
 	    x_i['dp_a'] = [-dp_x, -dp_y]
 	    
 
     def update(self):
+        #self.flock.setTempGoal()
         self.formation()
-        self.destination()
+        #self.destination()
         self.avoidance()
         self.robotAvoidance()
         self.flock.publishConnections()
@@ -317,44 +342,64 @@ class World(object):
     
 
 #World
-class Controlor(object):
+class Controler(object):
     def __init__(self):
-        self.world = World(Flock(), Goal(), Obstacle())
+        #self.world = World(Flock(), Goal(), Obstacle())
+        self.world = World(Flock())
 
 
-    def update(self, flocknode):
-        
+    def update(self, flock):  
+	flocknode = flock.node
+	
+	leader = flock.getLeader()
         length =  len(flocknode)
         for i in range(length):
             fn = flocknode[i]
             if fn['role'] != 'leader':
+	      xv = [fn['agent'].pose.position.x*SCALE, fn['agent'].pose.position.y*SCALE]
+	      xf = fn['xf']
+	      dis = np.sqrt( (xv[0] - xf[0])**2 + (xv[1] - xf[1])**2) / SCALE
 	      
-	      
-	      if fn['dp_r'][0] == 0 and fn['dp_r'][1] == 0:
-		np_x = (0.1*fn['dp_g'][0] / SCALE) + (0.1*fn['dp_f'][0]/ SCALE) + (1*fn['dp_a'][0] / SCALE)
-		np_y = (0.1*fn['dp_g'][1] / SCALE) + (0.1*fn['dp_f'][1]/ SCALE) + (1*fn['dp_a'][1] / SCALE)
+	      if dis < 0.3: # check if the robot is in the desired formation pose
+		print "in formation pose"
+		
+		r, p, leader_yaw = getRPY(leader.pose.orientation)
+		r, p, yaw = getRPY(fn['agent'].pose.orientation)  
+		
+		ang = leader_yaw - yaw	
+		ang = angles.normalize(ang,-np.pi,np.pi)
+		fn['agent'].SendCmd(0,ang/np.pi)
+		
 	      else:
-		print "Avoiding"
-		np_x = (1*fn['dp_a'][0] / SCALE) + (0.25*fn['dp_r'][0]/ SCALE)
-		np_y = (1*fn['dp_a'][1] / SCALE) + (0.25*fn['dp_r'][1]/ SCALE)
-	      r,p,yaw = getRPY(fn['agent'].pose.orientation)  
+		if fn['dp_r'][0] == 0 and fn['dp_r'][1] == 0:
+		  #np_x = (0.1*fn['dp_g'][0] / SCALE) + (0.1*fn['dp_f'][0]/ SCALE) + (1*fn['dp_a'][0] / SCALE)
+		  #np_y = (0.1*fn['dp_g'][1] / SCALE) + (0.1*fn['dp_f'][1]/ SCALE) + (1*fn['dp_a'][1] / SCALE)
+		  np_x = (0.1*fn['dp_f'][0]/ SCALE) + (1*fn['dp_a'][0] / SCALE)
+		  np_y = (0.1*fn['dp_f'][1]/ SCALE) + (1*fn['dp_a'][1] / SCALE)
+		else:
+		  print "Avoiding"
+		  np_x = (1*fn['dp_a'][0] / SCALE) + (0.25*fn['dp_r'][0]/ SCALE)
+		  np_y = (1*fn['dp_a'][1] / SCALE) + (0.25*fn['dp_r'][1]/ SCALE)
+		r,p,yaw = getRPY(fn['agent'].pose.orientation)  
+		
+		mod = np.sqrt(pow(np_x, 2)+(pow(np_y, 2)))
+		ang = np.arctan2(np_y, np_x) - angles.normalize(yaw,0,2*np.pi)
+		ang = angles.normalize(ang,-np.pi,np.pi)
+		
+		vel = np.sqrt(np_x*np_x + np_y*np_y)
+		#print vel
+		if vel > 0.7:
+		  
+		  vel = 0.7
 	      
-	      mod = np.sqrt(pow(np_x, 2)+(pow(np_y, 2)))
-	      ang = np.arctan2(np_y, np_x) - angles.normalize(yaw,0,2*np.pi)
-	      ang = angles.normalize(ang,-np.pi,np.pi)
+		fn['agent'].SendCmd(vel,ang/np.pi)
+	      #end if
 	      
-	      vel = np.sqrt(np_x*np_x + np_y*np_y)
-	      #print vel
-	      if vel > 0.6:
-		vel = 0.6
-	     
-	      fn['agent'].SendCmd(vel,ang/np.pi)
-            
             self.world.update()
 
 
     def step(self):
-        self.update(self.world.flocknode)
+        self.update(self.world.flock)
 
   
 #------------------------------------------------------------
@@ -366,7 +411,7 @@ if __name__ == '__main__':
 
 	#wait for the node to be initialized
 	time.sleep (1)
-	cont = Controlor()
+	cont = Controler()
     	rate = rospy.Rate(50) # 50hz
 	while not rospy.is_shutdown():
 	    cont.step()
